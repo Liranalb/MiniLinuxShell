@@ -23,67 +23,124 @@ void error() {
 
 void freeArrayInput(char** input)
 {
-    int i = 0;
-    while (input[i])
-        free(input[i++]);
+    int i=0;
+    while(input!= NULL && input[i] != NULL)
+    {
+        free(input[i]);
+                i++;
+    }
     free(input);
+//    int i = 0;
+//    while (input[i])
+//        free(input[i++]);
+//    free(input);
 }
+
+int argCounter(char str[]) {
+    int counter = 0;
+    char * command = strtok(str , " \n"); // add more marks
+
+    while (command != NULL) {
+        counter++;
+        command = strtok(NULL , " \n");
+    }
+    //printf("%d", wordCounter);
+    counter++; // for the last place to be NULL
+    return counter;
+}
+
+char** argOrginizer(char str[] ,char** arr, int counter) {
+
+    char * command = strtok(str , " \n"); // add more marks
+    // str = strtok(str , ". ,;?!"); // add more marks
+
+    for (int i = 0; i < counter-1 ; i++) {
+        arr[i] = (char*)malloc((strlen(command)+1)*sizeof(char));
+        strcpy(arr[i],command);
+        command = strtok(NULL , "\n ");
+        //printf("%s", arr[i]);
+    }
+    arr[counter-1] = NULL;
+    return arr;
+}
+
+int cd(char *pth){  // WORKING!!!
+    char path[maxLetters];
+    path[0] = '\0';
+    strcpy(path,pth);
+
+    char cwd[maxLetters];
+    if(pth[0] != '/') {
+        getcwd(cwd,sizeof(cwd));
+        strcat(cwd,"/");
+        strcat(cwd,path);
+        chdir(cwd);
+    }
+        else {
+        getcwd(cwd,sizeof(cwd));
+        strcat(cwd,path);
+        chdir(cwd);
+//        chdir(pth);
+    }
+
+    return 0;
+}
+
 
 int main() {
 
-    char str[510];			// creating a new string
-    char **tokens;
-
+    int numOfCommands = 0;
+    int lenOfCommands = 0;
+    char str[510] = "\0";			// creating a new string
     while(strcmp(str, "done")) {
-        printUserNPath();			// print the path and username
-        fgets(str , maxLetters , stdin); // getting a string from the user
 
-        // creating a new proccess
-        pid = fork();
+        printUserNPath();            // print the path and username
+        fgets(str, maxLetters, stdin); // getting a string from the user
 
-        if(pid < 0) {  // error creating the son proccess
+        char temp[maxLetters];        // creating a temp array
+
+        strcpy(temp, str);        // copy the current string to the temp string
+
+        int wordCounter = argCounter(temp);
+
+        char **arr = (char **) malloc((wordCounter) * sizeof(char *));
+
+        if (arr == NULL)
+            error();
+        argOrginizer(str, arr, wordCounter);
+
+
+        if(strcmp(arr[0], "cd") == 0) {        // NOT WORKING !!!
+                cd(arr[1]);
+                continue;
+        }
+        pid = fork(); // creating a new process
+
+        if (pid < 0) {  // error creating the son process
             error();
         }
 
-        if(pid == 0) {
-            char temp[maxLetters];		// creating a temp array
-            strcpy(temp,str);		// copy the current string to the temp string
-
-            int wordCounter = 0;
-            char * command = strtok(temp , ". ,;?!"); // add more marks
-
-            while (command != NULL) {
-                wordCounter++;
-                command = strtok(NULL , " \n");
+        if (pid == 0) {
+            if(arr[0] != NULL)
+                execvp(arr[0], arr);   //WORKSSSSSSSS
+            fprintf(stderr, "%s: command not found\n", arr[0]);
+            exit(EXIT_FAILURE);
+        } else {
+            int status;
+            wait(&status);
+            if(status == EXIT_SUCCESS)
+            {
+                numOfCommands++;
+                if(arr[0] != NULL)
+                    lenOfCommands += strlen(arr[0]);
             }
-            //printf("%d", wordCounter);
-            wordCounter++; // for the last place to be NULL
-            char **arr = (char **) malloc(wordCounter*sizeof(char*));
-
-            if(arr == NULL)
-                exit(1);
-            command = strtok(str , " \n");
-
-            for (int i = 0; i < wordCounter-1 ; i++) {
-                arr[i] = (char*)malloc((strlen(command)+1)*sizeof(char));
-                strcpy(arr[i],command);
-                command = strtok(NULL , " \n");
-                //printf("%s", arr[i]);
-            }
-
-            execvp(arr[0], arr);   //WORKSSSSSSSS
-
             freeArrayInput(arr);
-
-
+            arr = NULL;
         }
-        else {
-            wait(NULL);
-            continue;
-        }
+
     }
-    printf("\nBye !");
-    exit(0);
+    printf("Num of cmd: %d\nCmd length: %d\nBye !", numOfCommands, lenOfCommands);  // ADD A CONDITION WITH THE FATHER'S PID TO PREVENT DUPLICATE PRINTING
+    exit(0); // ADD COUNTERS FOR COMMANDS AND ARGUMENTS
 
 
 
