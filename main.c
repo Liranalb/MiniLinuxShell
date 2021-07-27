@@ -1,5 +1,3 @@
-// Liran Alboher    ID: 034612291
-
 #include<stdio.h>
 #include<string.h>
 #include<stdlib.h>
